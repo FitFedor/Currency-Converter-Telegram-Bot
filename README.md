@@ -20,5 +20,5 @@
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/your-username/currency_bot.git
+   https://github.com/FitFedor/currency_bot.git
    cd currency_bot
