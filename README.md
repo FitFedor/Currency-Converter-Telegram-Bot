@@ -16,9 +16,4 @@
 - `/rates` — показать курсы
 - `10 USD to RUB` — запрос на конвертацию
 
-## ⚙️ Установка
-
-1. Клонируйте репозиторий:
-   ```bash
-   https://github.com/FitFedor/currency_bot.git
-   cd currency_bot
+ №№ Нужно добавить свои токен телеграм и api key
