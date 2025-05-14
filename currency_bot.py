@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+import os
 import logging
 import requests
 import sys
@@ -9,7 +11,12 @@ from telegram.ext import (
     MessageHandler, ContextTypes, filters
 )
 
-API_KEY = "your_api_key_here"
+# Загрузка переменных окружения
+load_dotenv()
+
+API_KEY = os.getenv("EXCHANGE_API_KEY")
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
 BASE_URL = "https://api.apilayer.com/exchangerates_data/latest"
 CONVERT_URL = "https://api.apilayer.com/exchangerates_data/convert"
 CURRENCIES = ['USD', 'EUR', 'THB', 'VND', 'RUB', 'LKR', 'CNY', 'JPY', 'GBP', 'INR']
@@ -17,7 +24,6 @@ CURRENCIES = ['USD', 'EUR', 'THB', 'VND', 'RUB', 'LKR', 'CNY', 'JPY', 'GBP', 'IN
 logging.basicConfig(level=logging.INFO)
 user_base_currency = {}
 
-# Получение курсов
 def get_rates(base='EUR', symbols=None):
     if symbols is None:
         symbols = ','.join(CURRENCIES)
@@ -30,7 +36,6 @@ def get_rates(base='EUR', symbols=None):
         print("Ошибка при парсинге ответа API:", e)
         return None
 
-# Конвертация
 def convert_currency(amount, from_currency, to_currency):
     url = f"{CONVERT_URL}?from={from_currency}&to={to_currency}&amount={amount}"
     headers = {"apikey": API_KEY}
@@ -42,14 +47,12 @@ def convert_currency(amount, from_currency, to_currency):
         print("Ошибка при конвертации:", e)
         return None
 
-# Кнопки под сообщением
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Курсы валют", callback_data="show_rates")],
         [InlineKeyboardButton("🌐 Сменить валюту", callback_data="change_base")]
     ])
 
-# /start и смена базовой валюты
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(code, callback_data=f"setbase_{code}")]
@@ -61,7 +64,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.edit_message_text("Выберите базовую валюту:", reply_markup=reply_markup)
 
-# /rates или кнопка
 async def rates(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     base = user_base_currency.get(user_id, 'EUR')
@@ -77,7 +79,6 @@ async def rates(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Ошибка при получении курсов валют.", reply_markup=main_menu())
 
-# Обработка кнопок
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -88,7 +89,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         base = data.split("_")[1]
         user_base_currency[user_id] = base
         await query.edit_message_text(f"Базовая валюта установлена: {base}", reply_markup=main_menu())
-
     elif data == "show_rates":
         base = user_base_currency.get(user_id, 'EUR')
         data = get_rates(base=base)
@@ -101,11 +101,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(reply, reply_markup=main_menu())
         else:
             await query.edit_message_text("Ошибка при получении курсов валют.", reply_markup=main_menu())
-
     elif data == "change_base":
         await start(update, context)
 
-# Обработка текста (конвертация)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message.text.strip()
     match = re.match(r"(\d+(?:\.\d+)?)\s*([A-Z]{3})\s+to\s+([A-Z]{3})", msg, re.IGNORECASE)
@@ -121,12 +119,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Неверный формат. Пример: `10 USD to RUB`", reply_markup=main_menu())
 
-# Запуск
 def main():
     if sys.platform.startswith('win') and sys.version_info >= (3, 8):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    app = ApplicationBuilder().token("TOKEN_HERE").build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("rates", rates))
